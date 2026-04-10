@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Flashcard Quiz App</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,600;1,300&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #f5f0e8; --surface: #fdfaf4; --card-front: #1e2d40; --card-back: #2d4a1e;
+      --border: #ddd5c0; --text: #1a1612; --muted: #8a7e6a; --accent: #c45c26;
+      --accent2: #2a6496; --shadow: 0 4px 24px rgba(0,0,0,0.10);
+    }
+    body {
+      background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif;
+      min-height: 100vh; padding: 2rem 1rem 4rem;
+      background-image: radial-gradient(circle at 10% 20%, rgba(196,92,38,0.06) 0%, transparent 40%),
+        radial-gradient(circle at 90% 80%, rgba(42,100,150,0.06) 0%, transparent 40%);
+    }
+    .app { max-width: 700px; margin: 0 auto; }
+    header { text-align: center; margin-bottom: 2.5rem; animation: fadeDown 0.7s ease both; }
+    header .label { font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--accent); margin-bottom: 0.4rem; }
+    header h1 { font-family: 'Fraunces', serif; font-weight: 600; font-size: clamp(1.8rem, 4vw, 2.6rem); }
+    .progress-wrap { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; animation: fadeUp 0.7s ease 0.1s both; }
+    .progress-bar { flex: 1; height: 4px; background: var(--border); border-radius: 99px; overflow: hidden; }
+    .progress-fill { height: 100%; background: var(--accent); border-radius: 99px; transition: width 0.4s ease; }
+    .progress-label { font-size: 0.75rem; color: var(--muted); white-space: nowrap; }
+    .card-scene { width: 100%; height: 280px; perspective: 1200px; cursor: pointer; margin-bottom: 1.5rem; animation: fadeUp 0.7s ease 0.15s both; }
+    .card-inner { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; transition: transform 0.55s cubic-bezier(0.4,0,0.2,1); }
+    .card-scene.flipped .card-inner { transform: rotateY(180deg); }
+    .card-face { position: absolute; inset: 0; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2.5rem; backface-visibility: hidden; -webkit-backface-visibility: hidden; box-shadow: var(--shadow); }
+    .card-front { background: var(--card-front); color: #f0ece2; }
+    .card-back { background: var(--card-back); color: #f0ece2; transform: rotateY(180deg); }
+    .card-tag { font-size: 0.65rem; letter-spacing: 0.18em; text-transform: uppercase; opacity: 0.5; margin-bottom: 1rem; }
+    .card-text { font-family: 'Fraunces', serif; font-weight: 300; font-size: clamp(1.1rem, 2.5vw, 1.4rem); text-align: center; line-height: 1.6; }
+    .card-hint { position: absolute; bottom: 1rem; font-size: 0.7rem; opacity: 0.4; letter-spacing: 0.1em; }
+    .btn-show { display: block; width: 100%; background: white; border: 1.5px solid var(--border); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-weight: 500; padding: 0.9rem; border-radius: 8px; cursor: pointer; margin-bottom: 1rem; transition: background 0.2s, border-color 0.2s; animation: fadeUp 0.7s ease 0.2s both; }
+    .btn-show:hover { background: var(--bg); border-color: var(--accent); }
+    .nav-btns { display: flex; gap: 1rem; margin-bottom: 2rem; animation: fadeUp 0.7s ease 0.25s both; }
+    .btn-nav { flex: 1; background: var(--surface); border: 1.5px solid var(--border); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-weight: 500; padding: 0.85rem; border-radius: 8px; cursor: pointer; transition: background 0.2s, border-color 0.2s, transform 0.1s; }
+    .btn-nav:hover { border-color: var(--accent2); background: #eef4fa; }
+    .btn-nav:active { transform: scale(0.97); }
+    .btn-nav:disabled { opacity: 0.35; cursor: not-allowed; }
+    .section-title { font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.8rem; }
+    .section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+    .card-list { display: flex; flex-direction: column; gap: 0.6rem; margin-bottom: 2rem; animation: fadeUp 0.7s ease 0.3s both; }
+    .card-item { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 0.9rem 1rem; display: flex; align-items: center; gap: 0.8rem; }
+    .card-item-texts { flex: 1; min-width: 0; }
+    .card-item-q { font-size: 0.85rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .card-item-a { font-size: 0.75rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .card-item-btns { display: flex; gap: 0.4rem; flex-shrink: 0; }
+    .btn-icon { background: none; border: 1px solid var(--border); border-radius: 6px; padding: 0.35rem 0.55rem; font-size: 0.75rem; cursor: pointer; transition: background 0.2s, border-color 0.2s; }
+    .btn-icon:hover { background: var(--bg); }
+    .btn-icon.edit:hover { border-color: var(--accent2); color: var(--accent2); }
+    .btn-icon.del:hover { border-color: #c0392b; color: #c0392b; }
+    .form-box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; animation: fadeUp 0.7s ease 0.35s both; }
+    .form-box h3 { font-family: 'Fraunces', serif; font-weight: 600; font-size: 1rem; margin-bottom: 1rem; }
+    .form-group { margin-bottom: 0.9rem; }
+    .form-group label { display: block; font-size: 0.75rem; font-weight: 500; color: var(--muted); margin-bottom: 0.35rem; letter-spacing: 0.05em; text-transform: uppercase; }
+    .form-group textarea { width: 100%; background: var(--bg); border: 1.5px solid var(--border); border-radius: 6px; padding: 0.7rem 0.9rem; font-family: 'DM Sans', sans-serif; font-size: 0.9rem; color: var(--text); transition: border-color 0.2s; resize: none; }
+    .form-group textarea:focus { outline: none; border-color: var(--accent); }
+    .form-row { display: flex; gap: 0.8rem; }
+    .btn-primary { background: var(--accent); color: white; border: none; border-radius: 6px; padding: 0.75rem 1.5rem; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+    .btn-primary:hover { background: #a84d20; }
+    .btn-secondary { background: white; color: var(--text); border: 1.5px solid var(--border); border-radius: 6px; padding: 0.75rem 1.2rem; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-weight: 500; cursor: pointer; }
+    .btn-secondary:hover { background: var(--bg); }
+    .toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(80px); background: #1a1612; color: white; padding: 0.7rem 1.5rem; border-radius: 99px; font-size: 0.82rem; font-weight: 500; opacity: 0; transition: all 0.3s ease; z-index: 99; white-space: nowrap; }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    @keyframes fadeDown { from { opacity: 0; transform: translateY(-16px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+  </style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <p class="label">Study Tool</p>
+    <h1>Flashcard Quiz</h1>
+  </header>
+  <div class="progress-wrap">
+    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+    <span class="progress-label" id="progressLabel">1 / 5</span>
+  </div>
+  <div class="card-scene" id="cardScene" onclick="flipCard()">
+    <div class="card-inner" id="cardInner">
+      <div class="card-face card-front">
+        <span class="card-tag">Question</span>
+        <p class="card-text" id="cardQuestion"></p>
+        <span class="card-hint">click to flip</span>
+      </div>
+      <div class="card-face card-back">
+        <span class="card-tag">Answer</span>
+        <p class="card-text" id="cardAnswer"></p>
+        <span class="card-hint">click to flip back</span>
+      </div>
+    </div>
+  </div>
+  <button class="btn-show" onclick="flipCard()">👁 Show / Hide Answer</button>
+  <div class="nav-btns">
+    <button class="btn-nav" id="btnPrev" onclick="prevCard()">← Previous</button>
+    <button class="btn-nav" id="btnNext" onclick="nextCard()">Next →</button>
+  </div>
+  <p class="section-title">Manage Cards</p>
+  <div class="form-box">
+    <h3 id="formTitle">➕ Add New Card</h3>
+    <div class="form-group">
+      <label>Question</label>
+      <textarea id="inputQ" rows="2" placeholder="Type your question here..."></textarea>
+    </div>
+    <div class="form-group">
+      <label>Answer</label>
+      <textarea id="inputA" rows="2" placeholder="Type the answer here..."></textarea>
+    </div>
+    <div class="form-row">
+      <button class="btn-primary" onclick="saveCard()">Save Card</button>
+      <button class="btn-secondary" id="btnCancel" onclick="cancelEdit()" style="display:none">Cancel</button>
+    </div>
+  </div>
+  <div class="card-list" id="cardList"></div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+  let cards = [
+    { q: "What is the capital of France?", a: "Paris" },
+    { q: "What is 12 × 12?", a: "144" },
+    { q: "Who wrote Romeo and Juliet?", a: "William Shakespeare" },
+    { q: "What is the chemical symbol for water?", a: "H₂O" },
+    { q: "What planet is closest to the Sun?", a: "Mercury" },
+  ];
+  let current = 0, editIndex = -1;
+  function render() {
+    if (cards.length === 0) {
+      document.getElementById('cardQuestion').textContent = 'No cards yet — add one below!';
+      document.getElementById('cardAnswer').textContent = '...';
+    } else {
+      if (current >= cards.length) current = cards.length - 1;
+      document.getElementById('cardQuestion').textContent = cards[current].q;
+      document.getElementById('cardAnswer').textContent = cards[current].a;
+    }
+    const total = cards.length || 1;
+    document.getElementById('progressLabel').textContent = `${cards.length ? current + 1 : 0} / ${cards.length}`;
+    document.getElementById('progressFill').style.width = `${((current + 1) / total) * 100}%`;
+    document.getElementById('btnPrev').disabled = current === 0 || cards.length === 0;
+    document.getElementById('btnNext').disabled = current === cards.length - 1 || cards.length === 0;
+    document.getElementById('cardScene').classList.remove('flipped');
+    const list = document.getElementById('cardList');
+    list.innerHTML = cards.map((c, i) => `
+      <div class="card-item">
+        <div class="card-item-texts">
+          <div class="card-item-q">${i + 1}. ${c.q}</div>
+          <div class="card-item-a">→ ${c.a}</div>
+        </div>
+        <div class="card-item-btns">
+          <button class="btn-icon edit" onclick="startEdit(${i})">✏️</button>
+          <button class="btn-icon del" onclick="deleteCard(${i})">🗑</button>
+        </div>
+      </div>`).join('');
+  }
+  function flipCard() { if (cards.length) document.getElementById('cardScene').classList.toggle('flipped'); }
+  function nextCard() { if (current < cards.length - 1) { current++; render(); } }
+  function prevCard() { if (current > 0) { current--; render(); } }
+  function saveCard() {
+    const q = document.getElementById('inputQ').value.trim();
+    const a = document.getElementById('inputA').value.trim();
+    if (!q || !a) { showToast('⚠️ Please fill in both fields'); return; }
+    if (editIndex >= 0) { cards[editIndex] = { q, a }; showToast('✅ Card updated!'); cancelEdit(); }
+    else { cards.push({ q, a }); current = cards.length - 1; showToast('✅ Card added!'); document.getElementById('inputQ').value = ''; document.getElementById('inputA').value = ''; }
+    render();
+  }
+  function startEdit(i) {
+    editIndex = i;
+    document.getElementById('inputQ').value = cards[i].q;
+    document.getElementById('inputA').value = cards[i].a;
+    document.getElementById('formTitle').textContent = '✏️ Edit Card';
+    document.getElementById('btnCancel').style.display = 'inline-block';
+    document.getElementById('inputQ').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+  function cancelEdit() {
+    editIndex = -1;
+    document.getElementById('inputQ').value = '';
+    document.getElementById('inputA').value = '';
+    document.getElementById('formTitle').textContent = '➕ Add New Card';
+    document.getElementById('btnCancel').style.display = 'none';
+  }
+  function deleteCard(i) {
+    if (!confirm('Delete this card?')) return;
+    cards.splice(i, 1);
+    if (current >= cards.length && current > 0) current--;
+    showToast('🗑 Card deleted');
+    render();
+  }
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+  render();
+</script>
+</body>
+</html>
